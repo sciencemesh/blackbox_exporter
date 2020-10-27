@@ -42,8 +42,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Daniel-WWU-IT/blackbox_exporter/config"
-	"github.com/Daniel-WWU-IT/blackbox_exporter/prober"
+	"github.com/sciencemesh/blackbox_exporter/config"
+	"github.com/sciencemesh/blackbox_exporter/prober"
 )
 
 var (

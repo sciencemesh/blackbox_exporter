@@ -31,7 +31,7 @@ import (
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
 
-	"github.com/Daniel-WWU-IT/blackbox_exporter/config"
+	"github.com/sciencemesh/blackbox_exporter/config"
 )
 
 var (

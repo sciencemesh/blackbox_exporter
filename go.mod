@@ -1,4 +1,4 @@
-module github.com/Daniel-WWU-IT/blackbox_exporter
+module github.com/sciencemesh/blackbox_exporter
 
 require (
 	github.com/go-kit/kit v0.10.0
