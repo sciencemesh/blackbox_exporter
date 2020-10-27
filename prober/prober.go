@@ -20,7 +20,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/Daniel-WWU-IT/blackbox_exporter/config"
+	"github.com/sciencemesh/blackbox_exporter/config"
 )
 
 type ProbeFn func(ctx context.Context, target string, values url.Values, config config.Module, registry *prometheus.Registry, logger log.Logger) bool

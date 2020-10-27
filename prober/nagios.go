@@ -32,7 +32,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/Daniel-WWU-IT/blackbox_exporter/config"
+	"github.com/sciencemesh/blackbox_exporter/config"
 )
 
 const (
