@@ -1,4 +1,21 @@
 modules:
+  nagios_test:
+    prober: nagios
+    nagios:
+      check: check_test
+      args:
+        - --host $target$
+        - --something=42
+      treat_warnings_as_failure: true
+  iop-login:
+    prober: nagios
+    nagios:
+      check: ioplogin
+      args:
+        - --target=$target$
+        - --user=$user$
+        - --pass=$pass$
+        - --insecure=$insecure$
   http_2xx:
     prober: http
   http_post_2xx:
