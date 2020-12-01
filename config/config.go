@@ -202,6 +202,7 @@ type DNSRRValidator struct {
 type NagiosProbe struct {
 	Check                  string   `yaml:"check,omitempty"`
 	Arguments              []string `yaml:"args,omitempty"`
+	ProxyURL               string   `yaml:"proxy_url,omitempty"`
 	TreatWarningsAsFailure bool     `yaml:"treat_warnings_as_failure,omitempty"`
 }
 
