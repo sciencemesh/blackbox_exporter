@@ -44,6 +44,17 @@ const (
 
 type nagiosResult = int
 
+func getProxyEnvVariables(proxy string) []string {
+	return []string{
+		"HTTPS_PROXY=" + proxy,
+		"HTTP_PROXY=" + proxy,
+		"https_proxy=" + proxy,
+		"http_proxy=" + proxy,
+		"USE_PROXY=yes",
+		"use_proxy=yes",
+	}
+}
+
 func resolveNagiosCheckBinary(check string) (string, error) {
 	if check == "" {
 		return "", fmt.Errorf("no check specified")
@@ -80,7 +91,10 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 	placeholders["target"] = target
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)
 	cmd := exec.CommandContext(ctx, checkBinary, args...) // The context takes care of aborting the process if it is taking too long
-	output, _ := cmd.CombinedOutput()
+	if len(module.Nagios.ProxyURL) > 0 {
+		cmd.Env = append(os.Environ(), getProxyEnvVariables(module.Nagios.ProxyURL)...)
+	}
+	output, _ := cmd.CombinedOutput() // This starts the process
 
 	switch cmd.ProcessState.ExitCode() {
 	case -1:
