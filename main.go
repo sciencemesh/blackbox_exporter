@@ -176,7 +176,7 @@ func obfuscateModuleSettings(module *config.Module) config.Module {
 	// Create a deep copy of the module by marshalling and unmarshalling it
 	moduleNew := config.Module{}
 	c, _ := yaml.Marshal(module)
-	_ = yaml.Unmarshal(c, moduleNew)
+	_ = yaml.Unmarshal(c, &moduleNew)
 
 	for i, arg := range moduleNew.Nagios.Arguments {
 		var delim string
