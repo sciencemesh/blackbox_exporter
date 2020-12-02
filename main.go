@@ -174,7 +174,7 @@ func obfuscateModuleSettings(module *config.Module) config.Module {
 	names := []string{"user", "username", "login", "pass", "password", "pwd"}
 
 	// Create a deep copy of the module by marshalling and unmarshalling it
-	var moduleNew config.Module
+	moduleNew := config.Module{}
 	c, _ := yaml.Marshal(module)
 	_ = yaml.Unmarshal(c, moduleNew)
 
