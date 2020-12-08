@@ -81,7 +81,35 @@ func resolveNagiosCheckBinary(check string) (string, error) {
 	return checkBinary, nil
 }
 
-func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module) (nagiosResult, string) {
+func obfuscateNagiosCheckArgs(args []string) []string {
+	names := []string{"user", "username", "login", "pass", "password", "pwd"}
+	var newArgs []string
+
+	for i, arg := range args {
+		var delim string
+		if idx := strings.IndexAny(arg, " :="); idx != -1 {
+			delim = string(arg[idx])
+			arg = arg[0:idx]
+		}
+		argT := strings.TrimLeft(arg, "-")
+
+		argObfuscated := false
+		for _, name := range names {
+			if strings.EqualFold(argT, name) {
+				newArgs = append(newArgs, arg+delim+"*****")
+				argObfuscated = true
+				break
+			}
+		}
+		if !argObfuscated {
+			newArgs = append(newArgs, args[i])
+		}
+	}
+
+	return newArgs
+}
+
+func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module, logger log.Logger) (nagiosResult, string) {
 	placeholders := make(map[string]string)
 	for key, value := range urlParams {
 		if len(value) > 0 {
@@ -90,6 +118,7 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 	}
 	placeholders["target"] = target
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)
+	level.Debug(logger).Log("msg", "Running Nagios check", "args", obfuscateNagiosCheckArgs(args))
 	cmd := exec.CommandContext(ctx, checkBinary, args...) // The context takes care of aborting the process if it is taking too long
 	if len(module.Nagios.ProxyURL) > 0 {
 		cmd.Env = append(os.Environ(), getProxyEnvVariables(module.Nagios.ProxyURL)...)
@@ -160,7 +189,7 @@ func ProbeNagios(ctx context.Context, target string, values url.Values, module c
 	if checkBinary, err := resolveNagiosCheckBinary(module.Nagios.Check); err == nil {
 		level.Debug(logger).Log("msg", "Successfully resolved the Nagios check binary", "binary", checkBinary, "check", module.Nagios.Check)
 
-		result, msg := runNagiosCheck(checkBinary, ctx, target, values, module)
+		result, msg := runNagiosCheck(checkBinary, ctx, target, values, module, logger)
 		level.Info(logger).Log("msg", "Nagios check finished", "check", module.Nagios.Check, "result", result, "output", msg)
 		probeNagiosResult.WithLabelValues(msg).Set(float64(result))
 
