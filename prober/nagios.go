@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -81,7 +82,7 @@ func resolveNagiosCheckBinary(check string) (string, error) {
 	return checkBinary, nil
 }
 
-func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module, logger log.Logger) (nagiosResult, string) {
+func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module, logger log.Logger) (nagiosResult, string, map[string]float64) {
 	placeholders := make(map[string]string)
 	for key, value := range urlParams {
 		if len(value) > 0 {
@@ -100,12 +101,12 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 
 	switch cmd.ProcessState.ExitCode() {
 	case -1:
-		return checkError, "The process timed out" // Could also mean something else, but this is the most likely reason
+		return checkError, "The process timed out", map[string]float64{} // Could also mean something else, but this is the most likely reason
 	case checkOK, checkWarning, checkError, checkUnknown:
-		message, _, _ := splitNagiosOutput(string(output))
-		return cmd.ProcessState.ExitCode(), message
+		message, perfData, _ := splitNagiosOutput(string(output))
+		return cmd.ProcessState.ExitCode(), message, parseNagiosPerfData(perfData)
 	default:
-		return checkUnknown, fmt.Sprintf("An unexpected exit code was returned: %v", cmd.ProcessState.ExitCode())
+		return checkUnknown, fmt.Sprintf("An unexpected exit code was returned: %v", cmd.ProcessState.ExitCode()), map[string]float64{}
 	}
 }
 
@@ -129,6 +130,23 @@ func splitNagiosOutput(output string) (message string, perfData []string, log []
 	}
 
 	return
+}
+
+func parseNagiosPerfData(perfData []string) map[string]float64 {
+	dataMap := make(map[string]float64)
+	for _, data := range perfData {
+		if values := strings.SplitN(data, "=", 2); len(values) == 2 {
+			key := values[0]
+			if tokens := strings.Split(values[1], ";"); len(tokens) > 0 {
+				re := regexp.MustCompile("[^0-9.]+")
+				value := re.ReplaceAllString(tokens[0], "")
+				if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
+					dataMap[key] = floatVal
+				}
+			}
+		}
+	}
+	return dataMap
 }
 
 func parseNagiosArguments(args []string, values map[string]string) []string {
@@ -170,12 +188,25 @@ func ProbeNagios(ctx context.Context, target string, values url.Values, module c
 	)
 	registry.MustRegister(probeNagiosResult)
 
+	// This Gauge will hold any performance data
+	probeNagiosPerfData := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "probe_nagios_perfdata",
+			Help: "Holds Nagios probe performance data",
+		},
+		[]string{"key"},
+	)
+	registry.MustRegister(probeNagiosPerfData)
+
 	if checkBinary, err := resolveNagiosCheckBinary(module.Nagios.Check); err == nil {
 		level.Debug(logger).Log("msg", "Successfully resolved the Nagios check binary", "binary", checkBinary, "check", module.Nagios.Check)
 
-		result, msg := runNagiosCheck(checkBinary, ctx, target, values, module, logger)
+		result, msg, perfData := runNagiosCheck(checkBinary, ctx, target, values, module, logger)
 		level.Info(logger).Log("msg", "Nagios check finished", "check", module.Nagios.Check, "result", result, "output", msg)
 		probeNagiosResult.WithLabelValues(msg).Set(float64(result))
+		for key, value := range perfData {
+			probeNagiosPerfData.WithLabelValues(key).Set(value)
+		}
 
 		return result == checkOK || (result == checkWarning && !module.Nagios.TreatWarningsAsFailure)
 	} else {
