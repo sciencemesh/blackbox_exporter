@@ -134,10 +134,12 @@ func splitNagiosOutput(output string) (message string, perfData []string, log []
 
 func parseNagiosPerfData(perfData []string) map[string]float64 {
 	dataMap := make(map[string]float64)
+
 	for _, perfDataLine := range perfData {
 		for _, data := range strings.Split(perfDataLine, " ") {
 			if values := strings.SplitN(data, "=", 2); len(values) == 2 {
 				key := values[0]
+
 				if tokens := strings.Split(values[1], ";"); len(tokens) > 0 {
 					re := regexp.MustCompile("[^0-9.]+")
 					value := re.ReplaceAllString(tokens[0], "")
@@ -148,6 +150,7 @@ func parseNagiosPerfData(perfData []string) map[string]float64 {
 			}
 		}
 	}
+
 	return dataMap
 }
 
