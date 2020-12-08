@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/go-kit/kit/log"
@@ -81,7 +82,7 @@ func resolveNagiosCheckBinary(check string) (string, error) {
 	return checkBinary, nil
 }
 
-func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module) (nagiosResult, string) {
+func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlParams url.Values, module config.Module, logger log.Logger) (nagiosResult, string, map[string]float64) {
 	placeholders := make(map[string]string)
 	for key, value := range urlParams {
 		if len(value) > 0 {
@@ -90,20 +91,22 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 	}
 	placeholders["target"] = target
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)
+	level.Debug(logger).Log("msg", "Running Nagios check", "args", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, checkBinary, args...) // The context takes care of aborting the process if it is taking too long
 	if len(module.Nagios.ProxyURL) > 0 {
 		cmd.Env = append(os.Environ(), getProxyEnvVariables(module.Nagios.ProxyURL)...)
 	}
 	output, _ := cmd.CombinedOutput() // This starts the process
+	level.Debug(logger).Log("msg", "Nagios check finished", "exitcode", cmd.ProcessState.ExitCode(), "output", string(output))
 
 	switch cmd.ProcessState.ExitCode() {
 	case -1:
-		return checkError, "The process timed out" // Could also mean something else, but this is the most likely reason
+		return checkError, "The process timed out", map[string]float64{} // Could also mean something else, but this is the most likely reason
 	case checkOK, checkWarning, checkError, checkUnknown:
-		message, _, _ := splitNagiosOutput(string(output))
-		return cmd.ProcessState.ExitCode(), message
+		message, perfData, _ := splitNagiosOutput(string(output))
+		return cmd.ProcessState.ExitCode(), message, parseNagiosPerfData(perfData)
 	default:
-		return checkUnknown, fmt.Sprintf("An unexpected exit code was returned: %v", cmd.ProcessState.ExitCode())
+		return checkUnknown, fmt.Sprintf("An unexpected exit code was returned: %v", cmd.ProcessState.ExitCode()), map[string]float64{}
 	}
 }
 
@@ -129,9 +132,42 @@ func splitNagiosOutput(output string) (message string, perfData []string, log []
 	return
 }
 
+func parseNagiosPerfData(perfData []string) map[string]float64 {
+	dataMap := make(map[string]float64)
+
+	for _, perfDataLine := range perfData {
+		for _, data := range strings.Split(perfDataLine, " ") {
+			if values := strings.SplitN(data, "=", 2); len(values) == 2 {
+				key := values[0]
+
+				if tokens := strings.Split(values[1], ";"); len(tokens) > 0 {
+					re := regexp.MustCompile("[^0-9.]+")
+					value := re.ReplaceAllString(tokens[0], "")
+					if floatVal, err := strconv.ParseFloat(value, 64); err == nil {
+						dataMap[key] = floatVal
+					}
+				}
+			}
+		}
+	}
+
+	return dataMap
+}
+
 func parseNagiosArguments(args []string, values map[string]string) []string {
+	// Split args if necessary (so one can pass an argument like "-arg value" in the config)
+	newArgs := make([]string, 0, 2*len(args))
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			newArgs = append(newArgs, strings.SplitN(arg, " ", 2)...)
+		} else {
+			newArgs = append(newArgs, arg)
+		}
+	}
+	args = newArgs
+
 	// Replace all known placeholders ($...$) in the arguments; unknown placeholders are left as-is
-	newArgs := make([]string, 0, len(args))
+	newArgs = make([]string, 0, len(args))
 	for _, arg := range args {
 		re := regexp.MustCompile("\\$\\S*\\$")
 		newArgs = append(newArgs, re.ReplaceAllStringFunc(arg, func(str string) string {
@@ -157,12 +193,25 @@ func ProbeNagios(ctx context.Context, target string, values url.Values, module c
 	)
 	registry.MustRegister(probeNagiosResult)
 
+	// This Gauge will hold any performance data
+	probeNagiosPerfData := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "probe_nagios_perfdata",
+			Help: "Holds Nagios probe performance data",
+		},
+		[]string{"key"},
+	)
+	registry.MustRegister(probeNagiosPerfData)
+
 	if checkBinary, err := resolveNagiosCheckBinary(module.Nagios.Check); err == nil {
 		level.Debug(logger).Log("msg", "Successfully resolved the Nagios check binary", "binary", checkBinary, "check", module.Nagios.Check)
 
-		result, msg := runNagiosCheck(checkBinary, ctx, target, values, module)
+		result, msg, perfData := runNagiosCheck(checkBinary, ctx, target, values, module, logger)
 		level.Info(logger).Log("msg", "Nagios check finished", "check", module.Nagios.Check, "result", result, "output", msg)
 		probeNagiosResult.WithLabelValues(msg).Set(float64(result))
+		for key, value := range perfData {
+			probeNagiosPerfData.WithLabelValues(key).Set(value)
+		}
 
 		return result == checkOK || (result == checkWarning && !module.Nagios.TreatWarningsAsFailure)
 	} else {
