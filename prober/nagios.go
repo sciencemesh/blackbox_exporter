@@ -132,8 +132,19 @@ func splitNagiosOutput(output string) (message string, perfData []string, log []
 }
 
 func parseNagiosArguments(args []string, values map[string]string) []string {
+	// Split args if necessary (so one can pass an argument like "-arg value" in the config)
+	newArgs := make([]string, 0, 2*len(args))
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			newArgs = append(newArgs, strings.SplitN(arg, " ", 2)...)
+		} else {
+			newArgs = append(newArgs, arg)
+		}
+	}
+	args = newArgs
+
 	// Replace all known placeholders ($...$) in the arguments; unknown placeholders are left as-is
-	newArgs := make([]string, 0, len(args))
+	newArgs = make([]string, 0, len(args))
 	for _, arg := range args {
 		re := regexp.MustCompile("\\$\\S*\\$")
 		newArgs = append(newArgs, re.ReplaceAllStringFunc(arg, func(str string) string {
