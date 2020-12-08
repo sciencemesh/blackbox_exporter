@@ -81,7 +81,7 @@ func resolveNagiosCheckBinary(check string) (string, error) {
 	return checkBinary, nil
 }
 
-func obfuscateNagiosCheckArgs(args []string) []string {
+func ObfuscateNagiosCheckArgs(args []string) []string {
 	names := []string{"user", "username", "login", "pass", "password", "pwd"}
 	var newArgs []string
 
@@ -118,7 +118,7 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 	}
 	placeholders["target"] = target
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)
-	level.Debug(logger).Log("msg", "Running Nagios check", "args", obfuscateNagiosCheckArgs(args))
+	level.Debug(logger).Log("msg", "Running Nagios check", "args", strings.Join(ObfuscateNagiosCheckArgs(args), " "))
 	cmd := exec.CommandContext(ctx, checkBinary, args...) // The context takes care of aborting the process if it is taking too long
 	if len(module.Nagios.ProxyURL) > 0 {
 		cmd.Env = append(os.Environ(), getProxyEnvVariables(module.Nagios.ProxyURL)...)

@@ -171,29 +171,12 @@ func (sl scrapeLogger) Log(keyvals ...interface{}) error {
 }
 
 func obfuscateModuleSettings(module *config.Module) *config.Module {
-	names := []string{"user", "username", "login", "pass", "password", "pwd"}
-
 	// Create a deep copy of the module by marshalling and unmarshalling it
 	moduleNew := &config.Module{}
 	c, _ := yaml.Marshal(module)
 	_ = yaml.Unmarshal(c, moduleNew)
 
-	for i, arg := range moduleNew.Nagios.Arguments {
-		var delim string
-		if idx := strings.IndexAny(arg, " :="); idx != -1 {
-			delim = string(arg[idx])
-			arg = arg[0:idx]
-		}
-		argT := strings.TrimLeft(arg, "-")
-
-		for _, name := range names {
-			if strings.EqualFold(argT, name) {
-				moduleNew.Nagios.Arguments[i] = arg + delim + "*****"
-				break
-			}
-		}
-	}
-
+	moduleNew.Nagios.Arguments = prober.ObfuscateNagiosCheckArgs(moduleNew.Nagios.Arguments)
 	return moduleNew
 }
 
