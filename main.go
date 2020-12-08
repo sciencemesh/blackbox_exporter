@@ -172,12 +172,12 @@ func (sl scrapeLogger) Log(keyvals ...interface{}) error {
 
 func obfuscateModuleSettings(module *config.Module) *config.Module {
 	// Create a deep copy of the module by marshalling and unmarshalling it
-	moduleNew := &config.Module{}
+	var moduleNew config.Module
 	c, _ := yaml.Marshal(module)
-	_ = yaml.Unmarshal(c, moduleNew)
+	_ = yaml.Unmarshal(c, &moduleNew)
 
 	moduleNew.Nagios.Arguments = prober.ObfuscateNagiosCheckArgs(moduleNew.Nagios.Arguments)
-	return moduleNew
+	return &moduleNew
 }
 
 // DebugOutput returns plaintext debug output for a probe.
