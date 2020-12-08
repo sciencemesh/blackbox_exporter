@@ -170,16 +170,6 @@ func (sl scrapeLogger) Log(keyvals ...interface{}) error {
 	return sl.next.Log(kvs...)
 }
 
-func obfuscateModuleSettings(module *config.Module) *config.Module {
-	// Create a deep copy of the module by marshalling and unmarshalling it
-	var moduleNew config.Module
-	c, _ := yaml.Marshal(module)
-	_ = yaml.Unmarshal(c, &moduleNew)
-
-	moduleNew.Nagios.Arguments = prober.ObfuscateNagiosCheckArgs(moduleNew.Nagios.Arguments)
-	return &moduleNew
-}
-
 // DebugOutput returns plaintext debug output for a probe.
 func DebugOutput(module *config.Module, logBuffer *bytes.Buffer, registry *prometheus.Registry) string {
 	buf := &bytes.Buffer{}
@@ -194,7 +184,7 @@ func DebugOutput(module *config.Module, logBuffer *bytes.Buffer, registry *prome
 		expfmt.MetricFamilyToText(buf, mf)
 	}
 	fmt.Fprintf(buf, "\n\n\nModule configuration:\n")
-	c, err := yaml.Marshal(obfuscateModuleSettings(module))
+	c, err := yaml.Marshal(module)
 	if err != nil {
 		fmt.Fprintf(buf, "Error marshalling config: %s\n", err)
 	}
