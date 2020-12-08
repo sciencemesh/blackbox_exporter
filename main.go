@@ -211,7 +211,7 @@ func DebugOutput(module *config.Module, logBuffer *bytes.Buffer, registry *prome
 		expfmt.MetricFamilyToText(buf, mf)
 	}
 	fmt.Fprintf(buf, "\n\n\nModule configuration:\n")
-	c, err := yaml.Marshal(obfuscateModuleSettings(module))
+	c, err := yaml.Marshal(module)
 	if err != nil {
 		fmt.Fprintf(buf, "Error marshalling config: %s\n", err)
 	}
