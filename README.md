@@ -40,7 +40,12 @@ The following standard placeholders are supported:
 
 | Placeholder | Description |
 | --- | --- |
-| `target` | The host name that should be used as the Nagios probe's target. |
+| `target` | The full host name that should be used as the Nagios probe's target. |
+| `target_host` | If the target is a URL, this contains the host name of that URL. |
+| `target_port` | If the target is a URL, this contains the host port of that URL. |
+| `target_scheme` | If the target is a URL, this contains the scheme of that URL. |
+| `target_path` | If the target is a URL, this contains the path of that URL. |
+| `target_base` | If the target is a URL, this contains the scheme plus host name of that URL. |
 
 Any additional parameters passed by URL can also be used as placeholders:
 ```

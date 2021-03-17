@@ -89,7 +89,22 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 			placeholders[key] = value[0]
 		}
 	}
+
+	// Add various "hardcoded" placeholders
 	placeholders["target"] = target
+
+	if targetUrl, err := url.Parse(target); err == nil {
+		placeholders["target_host"] = targetUrl.Host
+		placeholders["target_port"] = targetUrl.Port()
+		placeholders["target_scheme"] = targetUrl.Scheme
+		if len(targetUrl.Path) > 0 {
+			placeholders["target_path"] = targetUrl.Path
+		} else {
+			placeholders["target_path"] = "/"
+		}
+		placeholders["target_base"] = fmt.Sprintf("%s://%s", targetUrl.Scheme, targetUrl.Host)
+	}
+
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)
 	level.Debug(logger).Log("msg", "Running Nagios check", "args", strings.Join(args, " "))
 	cmd := exec.CommandContext(ctx, checkBinary, args...) // The context takes care of aborting the process if it is taking too long
