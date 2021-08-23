@@ -380,7 +380,7 @@ func ProbeHTTP(ctx context.Context, target string, values url.Values, module con
 	client.CheckRedirect = func(r *http.Request, via []*http.Request) error {
 		level.Info(logger).Log("msg", "Received redirect", "location", r.Response.Header.Get("Location"))
 		redirects = len(via)
-		if redirects > 10 || httpConfig.NoFollowRedirects {
+		if redirects > 10 || !httpConfig.FollowRedirects {
 			level.Info(logger).Log("msg", "Not following redirect")
 			return errors.New("don't follow redirects")
 		}
