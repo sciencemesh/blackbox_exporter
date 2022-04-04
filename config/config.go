@@ -80,6 +80,8 @@ func init() {
 }
 
 type Config struct {
+	SiteAccounts SiteAccountsService `yaml:"siteaccounts"`
+
 	Modules map[string]Module `yaml:"modules"`
 }
 
@@ -116,6 +118,14 @@ func (sc *SafeConfig) ReloadConfig(confFile string) (err error) {
 	sc.Unlock()
 
 	return nil
+}
+
+type SiteAccountsService struct {
+	URL            string `yaml:"url"`
+	Authentication struct {
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	} `yaml:"authentication"`
 }
 
 type Module struct {
