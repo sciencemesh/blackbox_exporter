@@ -1,4 +1,4 @@
-FROM golang:1.13
+FROM golang:1.16
 LABEL maintainer="Daniel Mueller <daniel.mueller@uni-muenster.de>"
 
 WORKDIR /src/blackbox_exporter/
