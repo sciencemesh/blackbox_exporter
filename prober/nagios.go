@@ -32,8 +32,8 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/sciencemesh/blackbox_exporter/config"
+	"github.com/sciencemesh/blackbox_exporter/siteacc"
 )
 
 const (
@@ -92,7 +92,6 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 
 	// Add various "hardcoded" placeholders
 	placeholders["target"] = target
-
 	if targetUrl, err := url.Parse(target); err == nil {
 		placeholders["target_host"] = targetUrl.Host
 		placeholders["target_port"] = targetUrl.Port()
@@ -103,6 +102,14 @@ func runNagiosCheck(checkBinary string, ctx context.Context, target string, urlP
 			placeholders["target_path"] = "/"
 		}
 		placeholders["target_base"] = fmt.Sprintf("%s://%s", targetUrl.Scheme, targetUrl.Host)
+	}
+	if site, ok := placeholders["site"]; ok {
+		site, err := siteacc.QuerySiteTestUserCredentials(site)
+		if err != nil {
+			return checkError, fmt.Sprintf("Unable to retrieve test user credentials for site %v", site), map[string]float64{}
+		}
+		placeholders["testclient_id"] = site.Config.TestClientCredentials.ID
+		placeholders["testclient_secret"] = site.Config.TestClientCredentials.Secret
 	}
 
 	args := parseNagiosArguments(module.Nagios.Arguments, placeholders)

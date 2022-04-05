@@ -21,11 +21,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sciencemesh/blackbox_exporter/siteacc"
 	"gopkg.in/yaml.v3"
 
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/config"
+	siteAccCfg "github.com/sciencemesh/blackbox_exporter/siteacc/config"
 )
 
 var (
@@ -80,9 +82,8 @@ func init() {
 }
 
 type Config struct {
-	SiteAccounts SiteAccountsService `yaml:"siteaccounts"`
-
-	Modules map[string]Module `yaml:"modules"`
+	SiteAccounts siteAccCfg.SiteAccountsService `yaml:"siteaccounts"`
+	Modules      map[string]Module              `yaml:"modules"`
 }
 
 type SafeConfig struct {
@@ -115,17 +116,10 @@ func (sc *SafeConfig) ReloadConfig(confFile string) (err error) {
 
 	sc.Lock()
 	sc.C = c
+	siteacc.SetSiteAccountsServiceConfig(&c.SiteAccounts)
 	sc.Unlock()
 
 	return nil
-}
-
-type SiteAccountsService struct {
-	URL            string `yaml:"url"`
-	Authentication struct {
-		Username string `yaml:"username"`
-		Password string `yaml:"password"`
-	} `yaml:"authentication"`
 }
 
 type Module struct {
@@ -144,7 +138,7 @@ type HTTPProbe struct {
 	ValidHTTPVersions            []string                `yaml:"valid_http_versions,omitempty"`
 	IPProtocol                   string                  `yaml:"preferred_ip_protocol,omitempty"`
 	IPProtocolFallback           bool                    `yaml:"ip_protocol_fallback,omitempty"`
-	FollowRedirects              bool                    `yaml:"follow_redirects,omitempty"`
+	FollowRedirects              bool                    `yaml:"follow,omitempty"`
 	FailIfSSL                    bool                    `yaml:"fail_if_ssl,omitempty"`
 	FailIfNotSSL                 bool                    `yaml:"fail_if_not_ssl,omitempty"`
 	Method                       string                  `yaml:"method,omitempty"`
