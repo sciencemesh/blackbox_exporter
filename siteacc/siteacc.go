@@ -21,15 +21,15 @@ package siteacc
 import (
 	"encoding/json"
 
+	"github.com/cs3org/reva/pkg/siteacc/data"
 	"github.com/pkg/errors"
 	"github.com/sciencemesh/blackbox_exporter/siteacc/config"
-	"github.com/sciencemesh/blackbox_exporter/siteacc/temp"
 )
 
 type queryResponse struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Site *temp.Site `json:"site"`
+		Site *data.Site `json:"site"`
 	} `json:"data"`
 }
 
@@ -41,7 +41,7 @@ func SetSiteAccountsServiceConfig(siteacc *config.SiteAccountsService) {
 	siteAccConfig = *siteacc
 }
 
-func QuerySiteTestUserCredentials(site string) (*temp.Site, error) {
+func QuerySiteTestUserCredentials(site string) (*data.Site, error) {
 	if siteAccConfig.URL == "" {
 		return nil, errors.Errorf("no site accounts service URL configured")
 	}
