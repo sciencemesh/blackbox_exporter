@@ -46,6 +46,8 @@ The following standard placeholders are supported:
 | `target_scheme` | If the target is a URL, this contains the scheme of that URL. |
 | `target_path` | If the target is a URL, this contains the path of that URL. |
 | `target_base` | If the target is a URL, this contains the scheme plus host name of that URL. |
+| `testclient_id` | The ID of the site-specific test client. |
+| `testclient_secret` | The secret of the site-specific test client. |
 
 Any additional parameters passed by URL can also be used as placeholders:
 ```
